@@ -1,0 +1,60 @@
+// PIR Night Lamp Controller
+// Project: Automated lighting system that turns an LED on when motion is detected 
+// and keeps it on for a set duration (10 seconds).
+
+// --- Pin Definitions ---
+// PIR Sensor D1 pin (Digital Output) connected to Arduino Pin 2
+const int pirPin = 2;       
+// LED Actuator connected to Arduino Pin 13 (ONBOARD LED) for testing
+const int ledPin = 13;       
+
+// --- Timing Variables ---
+// Duration (in milliseconds) the light stays ON after detection (10 seconds)
+const unsigned long lightDuration = 10000; 
+unsigned long lastMotionTime = 0;          // Stores the time (millis()) when the last motion was detected
+bool lightState = false;                   // Current state of the light (true = ON, false = OFF)
+
+void setup() {
+  pinMode(pirPin, INPUT);  // Set the PIR sensor pin as an input
+  pinMode(ledPin, OUTPUT); // Set the onboard LED pin as an output
+
+  // Initialize the serial monitor for debugging
+  Serial.begin(9600);
+  Serial.println("--- PIR Night Lamp Ready (Using Onboard LED) ---");
+  Serial.println("1. Stand still for 30 seconds for PIR sensor calibration.");
+  Serial.println("2. Move to trigger light. Light stays ON for 10 seconds after motion stops.");
+
+  // Ensure the LED is OFF at startup
+  digitalWrite(ledPin, LOW);
+}
+
+void loop() {
+  // Read the state of the PIR sensor (HIGH = Motion, LOW = No Motion)
+  int pirState = digitalRead(pirPin); 
+
+  // 1. Check for Motion Trigger (Input is HIGH)
+  if (pirState == HIGH) {
+    
+    // A. If the light was off, turn it ON
+    if (lightState == false) {
+      digitalWrite(ledPin, HIGH);
+      lightState = true;
+      Serial.println("Motion detected: Light ON.");
+    }
+    
+    // B. Reset the timer! This is the 're-triggerable' logic.
+    // Every time motion is detected, the 10-second countdown is reset.
+    lastMotionTime = millis();
+  }
+
+  // 2. Check for Timeout (Output logic)
+  // This runs only if the light is ON AND the required time has passed since last motion.
+  if (lightState == true) {
+    if (millis() - lastMotionTime >= lightDuration) {
+      // Timeout reached! Turn the light OFF
+      digitalWrite(ledPin, LOW);
+      lightState = false;
+      Serial.println("Timeout: Light OFF.");
+    }
+  }
+}
